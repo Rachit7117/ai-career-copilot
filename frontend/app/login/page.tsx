@@ -26,8 +26,14 @@ export default function LoginPage() {
         setMagicSent(true);
         toast.success("Magic link sent! Check your email.");
       } else if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/auth/callback` } });
+        const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/auth/callback` } });
         if (error) throw error;
+        // If email confirmation is OFF, the user is signed in immediately
+        if (data.session) {
+          router.push("/dashboard");
+          router.refresh();
+          return;
+        }
         toast.success("Account created! Check your email to confirm.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
