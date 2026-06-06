@@ -6,7 +6,7 @@ import { KanbanBoard } from "@/components/applications/kanban-board";
 import { useState } from "react";
 import { PlusCircle, LayoutGrid, List } from "lucide-react";
 import Link from "next/link";
-import { aiApi, resumesApi, type MultiJDRequest } from "@/lib/api";
+import { aiApi, resumesApi } from "@/lib/api";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Layers, Loader2 } from "lucide-react";
