@@ -3,7 +3,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Briefcase, Mail, Lock, Loader2, Chrome } from "lucide-react";
+import { Briefcase, Mail, Lock, Loader2 } from "lucide-react";
 
 type Mode = "signin" | "signup" | "magic";
 
@@ -42,9 +42,6 @@ export default function LoginPage() {
     }
   }
 
-  async function handleGoogle() {
-    await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${location.origin}/auth/callback` } });
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -115,18 +112,6 @@ export default function LoginPage() {
                 {mode === "signin" ? "Sign In" : mode === "signup" ? "Create Account" : "Send Magic Link"}
               </button>
 
-              <div className="relative my-4">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-                <div className="relative flex justify-center text-xs text-muted-foreground"><span className="bg-card px-2">or</span></div>
-              </div>
-
-              <button
-                type="button" onClick={handleGoogle}
-                className="w-full py-2.5 px-4 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors flex items-center justify-center gap-2"
-              >
-                <Chrome className="w-4 h-4" />
-                Continue with Google
-              </button>
             </form>
           )}
         </div>
