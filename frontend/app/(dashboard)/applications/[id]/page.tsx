@@ -22,7 +22,13 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
   });
   const generateResumeMutation = useMutation({
     mutationFn: (type: "ats" | "recruiter" | "impact") => aiApi.generateResume(id, type),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["application", id] }); toast.success("Resume generated!"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["application", id] });
+      toast.success("Resume generated! Open Resume Studio to view and edit.", {
+        action: { label: "Open Studio", onClick: () => window.location.href = `/applications/${id}/resume-studio` },
+        duration: 6000,
+      });
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   const generateCLMutation = useMutation({
@@ -114,8 +120,8 @@ export default function ApplicationDetailPage({ params }: { params: { id: string
                 </button>
               ))}
               {app.tailored_resumes?.length > 0 && (
-                <Link href={`/applications/${id}/resume-studio`} className="flex items-center gap-2 text-xs text-primary hover:underline mt-2">
-                  <FileText className="w-3 h-3" />Open Resume Studio →
+                <Link href={`/applications/${id}/resume-studio`} className="flex items-center justify-center gap-2 w-full px-3 py-2 mt-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors">
+                  <FileText className="w-3.5 h-3.5" />Open Resume Studio →
                 </Link>
               )}
             </div>

@@ -5,7 +5,10 @@ from .ai_service import llm_json
 
 SYSTEM = """You are a senior learning & development expert. Create a practical learning roadmap.
 
-For each skill gap, provide actionable resources. Focus on free/low-cost resources first.
+CRITICAL RULE FOR URLS: Only use YouTube search URLs in this format:
+  https://www.youtube.com/results?search_query=SEARCH+TERMS+HERE
+Replace spaces with + in the search query. These URLs always work and are always free.
+Do NOT use specific video URLs, course links, or any other URLs — they break.
 
 Return JSON:
 {
@@ -22,9 +25,9 @@ Return JSON:
           "title": "Start with fundamentals",
           "resources": [
             {
-              "type": "youtube|documentation|course|article|book",
-              "title": "resource title",
-              "url": "",
+              "type": "youtube",
+              "title": "descriptive search title e.g. 'Agile Product Development for PMs'",
+              "url": "https://www.youtube.com/results?search_query=agile+product+development+for+product+managers",
               "description": "what you'll learn",
               "free": true,
               "estimated_time": "3 hours"

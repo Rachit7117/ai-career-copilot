@@ -65,17 +65,23 @@ async def llm_complete(user_id: str, system: str, user: str, temperature: float 
 
 
 async def llm_json(user_id: str, system: str, user: str) -> Any:
-    """Completion that returns parsed JSON."""
+    """Completion that returns parsed JSON. Works with all models (no response_format dependency)."""
     cfg = await get_user_llm_config(user_id)
     response = await litellm.acompletion(
         model=cfg["model"],
         api_key=cfg["api_key"],
         messages=[
-            {"role": "system", "content": system + "\n\nRespond ONLY with valid JSON."},
+            {"role": "system", "content": system + "\n\nIMPORTANT: Respond ONLY with valid JSON. No markdown, no code blocks, no explanation. Just raw JSON."},
             {"role": "user", "content": user},
         ],
         temperature=0.1,
-        response_format={"type": "json_object"},
+        max_tokens=4096,
     )
-    raw = response.choices[0].message.content
+    raw = response.choices[0].message.content.strip()
+    # Strip markdown code fences if the model wrapped in them
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+    raw = raw.strip()
     return json.loads(raw)

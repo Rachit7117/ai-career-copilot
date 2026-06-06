@@ -9,6 +9,7 @@ import { aiApi, type TailoredResume } from "@/lib/api";
 import { toast } from "sonner";
 import { Loader2, Wand2 } from "lucide-react";
 import { useState } from "react";
+import { marked } from "marked";
 
 const REWRITE_ACTIONS = [
   { key: "rewrite", label: "Rewrite" },
@@ -29,7 +30,7 @@ export function ResumeEditor({ resume, applicationId }: { resume: TailoredResume
       Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
-    content: resume.content_md || "",
+    content: resume.content_md ? marked(resume.content_md) as string : "",
     onSelectionUpdate({ editor }) {
       const sel = editor.state.selection;
       const text = editor.state.doc.textBetween(sel.from, sel.to);
