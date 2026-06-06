@@ -30,16 +30,14 @@ export default function LoginPage() {
         if (error) throw error;
         // If email confirmation is OFF, the user is signed in immediately
         if (data.session) {
-          router.push("/dashboard");
-          router.refresh();
+          window.location.href = "/dashboard";
           return;
         }
         toast.success("Account created! Check your email to confirm.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        router.push("/dashboard");
-        router.refresh();
+        window.location.href = "/dashboard";
       }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
