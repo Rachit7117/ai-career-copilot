@@ -20,6 +20,8 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      console.log("SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log("ANON_KEY exists:", !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
       if (mode === "magic") {
         const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: `${location.origin}/auth/callback` } });
         if (error) throw error;
@@ -35,7 +37,8 @@ export default function LoginPage() {
         }
         toast.success("Account created! Check your email to confirm.");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        console.log("SignIn result - session:", !!data.session, "user:", !!data.user, "error:", error?.message);
         if (error) throw error;
         window.location.href = "/dashboard";
       }
