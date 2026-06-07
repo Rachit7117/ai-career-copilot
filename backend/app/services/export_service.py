@@ -12,63 +12,104 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, HRFlowable
 from reportlab.lib import colors
 
 
+def _clean_inline(text: str) -> str:
+    """Remove markdown inline syntax."""
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    text = re.sub(r'`(.+?)`', r'\1', text)
+    return text.strip()
+
+
 def markdown_to_pdf(md: str) -> bytes:
-    """Convert markdown resume to PDF using reportlab."""
+    """Convert markdown resume to Harvard-style PDF."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter,
-        rightMargin=0.75*inch, leftMargin=0.75*inch,
-        topMargin=0.75*inch, bottomMargin=0.75*inch)
-    styles = getSampleStyleSheet()
+        rightMargin=0.7*inch, leftMargin=0.7*inch,
+        topMargin=0.6*inch, bottomMargin=0.6*inch)
 
-    name_style = ParagraphStyle("Name", parent=styles["Normal"], fontSize=18, fontName="Helvetica-Bold", spaceAfter=4)
-    contact_style = ParagraphStyle("Contact", parent=styles["Normal"], fontSize=9, textColor=colors.gray, spaceAfter=8)
-    h1_style = ParagraphStyle("H1", parent=styles["Normal"], fontSize=13, fontName="Helvetica-Bold", spaceBefore=10, spaceAfter=3)
-    h2_style = ParagraphStyle("H2", parent=styles["Normal"], fontSize=11, fontName="Helvetica-Bold", spaceBefore=8, spaceAfter=2)
-    h3_style = ParagraphStyle("H3", parent=styles["Normal"], fontSize=10, fontName="Helvetica-Bold", spaceBefore=4, spaceAfter=1)
-    body_style = ParagraphStyle("Body", parent=styles["Normal"], fontSize=10, spaceAfter=2, leading=14)
-    bullet_style = ParagraphStyle("Bullet", parent=styles["Normal"], fontSize=10, leftIndent=15, spaceAfter=1, leading=13)
+    # Harvard-style styles
+    name_style = ParagraphStyle("Name", fontSize=20, fontName="Helvetica-Bold",
+        alignment=1, spaceAfter=3)  # centered
+    contact_style = ParagraphStyle("Contact", fontSize=9, textColor=colors.HexColor("#444444"),
+        alignment=1, spaceAfter=10)  # centered
+    section_style = ParagraphStyle("Section", fontSize=10, fontName="Helvetica-Bold",
+        spaceBefore=10, spaceAfter=2, textTransform="uppercase")
+    job_title_style = ParagraphStyle("JobTitle", fontSize=10, fontName="Helvetica-Bold",
+        spaceBefore=6, spaceAfter=0)
+    job_meta_style = ParagraphStyle("JobMeta", fontSize=9, textColor=colors.HexColor("#555555"),
+        spaceAfter=2, fontName="Helvetica-Oblique")
+    bullet_style = ParagraphStyle("Bullet", fontSize=10, leftIndent=12,
+        spaceAfter=1, leading=13, bulletIndent=0)
+    body_style = ParagraphStyle("Body", fontSize=10, spaceAfter=3, leading=14)
+    skills_style = ParagraphStyle("Skills", fontSize=10, spaceAfter=2, leading=13)
 
     story = []
-    lines = md.split("\n")
-    first_h1 = True
+    lines = md.strip().split("\n")
+    i = 0
 
-    for line in lines:
-        line = line.rstrip()
+    while i < len(lines):
+        line = lines[i].rstrip()
+
         if not line:
-            story.append(Spacer(1, 3))
+            i += 1
             continue
 
-        # Clean inline markdown
-        def clean(text):
-            text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-            text = re.sub(r'\*(.+?)\*', r'\1', text)
-            text = re.sub(r'`(.+?)`', r'\1', text)
-            return text.strip()
-
+        # Name (# header)
         if line.startswith("# "):
-            style = name_style if first_h1 else h1_style
-            first_h1 = False
-            story.append(Paragraph(clean(line[2:]), style))
-            story.append(HRFlowable(width="100%", thickness=0.5, color=colors.black, spaceAfter=4))
-        elif line.startswith("## "):
-            story.append(Paragraph(clean(line[3:]).upper(), h2_style))
-            story.append(HRFlowable(width="100%", thickness=0.3, color=colors.lightgrey, spaceAfter=2))
-        elif line.startswith("### "):
-            story.append(Paragraph(clean(line[4:]), h3_style))
-        elif line.startswith("- ") or line.startswith("* "):
-            story.append(Paragraph(f"• {clean(line[2:])}", bullet_style))
-        elif line.startswith("|"):
-            # contact line (pipe-separated)
-            story.append(Paragraph(clean(line), contact_style))
-        else:
-            story.append(Paragraph(clean(line), body_style))
+            name = _clean_inline(line[2:])
+            story.append(Paragraph(name, name_style))
+            i += 1
+            # Next non-empty line = contact info
+            while i < len(lines) and not lines[i].strip():
+                i += 1
+            if i < len(lines) and not lines[i].startswith("#"):
+                contact = _clean_inline(lines[i])
+                story.append(Paragraph(contact, contact_style))
+                story.append(HRFlowable(width="100%", thickness=1, color=colors.black, spaceAfter=4))
+                i += 1
+            continue
+
+        # Section headers (##)
+        if line.startswith("## "):
+            title = _clean_inline(line[3:]).upper()
+            story.append(Paragraph(title, section_style))
+            story.append(HRFlowable(width="100%", thickness=0.5, color=colors.black, spaceAfter=3))
+            i += 1
+            continue
+
+        # Bold lines = job titles
+        if line.startswith("**") and line.endswith("**"):
+            story.append(Paragraph(_clean_inline(line), job_title_style))
+            i += 1
+            # Check if next line is italic (company/date/location)
+            if i < len(lines) and lines[i].strip().startswith("*") and lines[i].strip().endswith("*"):
+                story.append(Paragraph(_clean_inline(lines[i]), job_meta_style))
+                i += 1
+            continue
+
+        # Bullet points
+        if line.startswith("- ") or line.startswith("* "):
+            text = _clean_inline(line[2:])
+            story.append(Paragraph(f"  •  {text}", bullet_style))
+            i += 1
+            continue
+
+        # Italic lines (standalone meta info)
+        if line.startswith("*") and line.endswith("*"):
+            story.append(Paragraph(_clean_inline(line), job_meta_style))
+            i += 1
+            continue
+
+        # Regular text
+        story.append(Paragraph(_clean_inline(line), body_style))
+        i += 1
 
     doc.build(story)
     return buffer.getvalue()
 
 
 def markdown_to_docx(md: str) -> bytes:
-    """Convert markdown resume to DOCX."""
+    """Convert markdown resume to Harvard-style DOCX."""
     doc = Document()
     for section in doc.sections:
         section.top_margin = Inches(0.75)
@@ -76,34 +117,78 @@ def markdown_to_docx(md: str) -> bytes:
         section.left_margin = Inches(0.75)
         section.right_margin = Inches(0.75)
 
-    def clean(text):
-        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
-        text = re.sub(r'\*(.+?)\*', r'\1', text)
-        return text.strip()
+    lines = md.strip().split("\n")
+    i = 0
 
-    first_h1 = True
-    for line in md.split("\n"):
-        line = line.rstrip()
+    while i < len(lines):
+        line = lines[i].rstrip()
+
         if not line:
+            i += 1
             continue
+
+        # Name
         if line.startswith("# "):
-            p = doc.add_heading(clean(line[2:]), level=0 if first_h1 else 1)
-            if first_h1:
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                first_h1 = False
-        elif line.startswith("## "):
-            doc.add_heading(clean(line[3:]), level=2)
-        elif line.startswith("### "):
-            doc.add_heading(clean(line[4:]), level=3)
-        elif line.startswith("- ") or line.startswith("* "):
-            doc.add_paragraph(clean(line[2:]), style="List Bullet")
-        elif "|" in line and not line.startswith("#"):
-            p = doc.add_paragraph(clean(line))
-            for run in p.runs:
-                run.font.size = Pt(9)
-                run.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
-        else:
-            doc.add_paragraph(clean(line))
+            p = doc.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = p.add_run(_clean_inline(line[2:]))
+            run.font.size = Pt(20)
+            run.font.bold = True
+            i += 1
+            # Contact line
+            while i < len(lines) and not lines[i].strip():
+                i += 1
+            if i < len(lines) and not lines[i].startswith("#"):
+                cp = doc.add_paragraph()
+                cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                cr = cp.add_run(_clean_inline(lines[i]))
+                cr.font.size = Pt(9)
+                i += 1
+            continue
+
+        # Section headers
+        if line.startswith("## "):
+            h = doc.add_heading(_clean_inline(line[3:]).upper(), level=2)
+            for run in h.runs:
+                run.font.size = Pt(10)
+                run.font.bold = True
+            i += 1
+            continue
+
+        # Bold = job title
+        if line.startswith("**") and line.endswith("**"):
+            p = doc.add_paragraph()
+            run = p.add_run(_clean_inline(line))
+            run.font.bold = True
+            run.font.size = Pt(10)
+            i += 1
+            # Italic next = meta
+            if i < len(lines) and lines[i].strip().startswith("*") and lines[i].strip().endswith("*"):
+                mp = doc.add_paragraph()
+                mr = mp.add_run(_clean_inline(lines[i]))
+                mr.font.italic = True
+                mr.font.size = Pt(9)
+                mr.font.color.rgb = RGBColor(0x55, 0x55, 0x55)
+                i += 1
+            continue
+
+        # Bullets
+        if line.startswith("- ") or line.startswith("* "):
+            doc.add_paragraph(_clean_inline(line[2:]), style="List Bullet")
+            i += 1
+            continue
+
+        # Italic standalone
+        if line.startswith("*") and line.endswith("*"):
+            p = doc.add_paragraph()
+            r = p.add_run(_clean_inline(line))
+            r.italic = True
+            r.font.size = Pt(9)
+            i += 1
+            continue
+
+        doc.add_paragraph(_clean_inline(line))
+        i += 1
 
     buffer = io.BytesIO()
     doc.save(buffer)

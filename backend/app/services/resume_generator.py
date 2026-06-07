@@ -12,47 +12,87 @@ GROUNDING_NOTICE = """CRITICAL RULE — STRICTLY FORBIDDEN:
 
 ALLOWED: Rewrite wording, reorder bullets, surface relevant existing content, optimize phrasing."""
 
+MARKDOWN_STRUCTURE = """
+Use EXACTLY this markdown structure (Harvard Resume Format):
+
+```
+# FULL NAME
+email | phone | location | linkedin_url
+
+## SUMMARY
+2-3 line summary tailored to the role.
+
+## EXPERIENCE
+
+**Job Title**
+*Company Name | Start Date – End Date | Location*
+- Achievement bullet starting with action verb
+- Achievement bullet with quantified result
+
+**Job Title**
+*Company Name | Start Date – End Date | Location*
+- Achievement bullet
+
+## EDUCATION
+
+**Degree in Field**
+*Institution | Graduation Year*
+
+## SKILLS
+Skill 1, Skill 2, Skill 3, Skill 4 (comma-separated on ONE line per category)
+
+## CERTIFICATIONS
+- Certification Name — Issuer (Date)
+```
+
+CRITICAL FORMATTING RULES:
+- Name must be on line 1 as `# NAME`
+- Contact on line 2 as plain text with | separators
+- Job titles in **bold** on their own line
+- Company/date/location in *italics* on the next line
+- Bullets use `-` prefix
+- Skills on ONE line, comma-separated (not one per line)
+- NO asterisks (*) for bullets — use only `-`
+- NO nested bullets
+"""
+
 ATS_SYSTEM = f"""{GROUNDING_NOTICE}
 
-You are an ATS optimization expert. Generate a clean, keyword-rich resume in MARKDOWN format.
+You are an ATS optimization expert. Generate a keyword-rich resume.
 
 RULES:
-- Use EXACT keywords from the job description where the candidate has matching experience
-- Standard section headers: Summary, Experience, Skills, Education, Certifications
-- Bullet points start with strong action verbs (Led, Built, Drove, Scaled, etc.)
-- Include only skills/tools explicitly mentioned in the master resume
-- Optimize for ATS parsers: no tables, no columns, clean formatting
-- Summary should be 2-3 lines with role title + top 3 matching strengths
+- Use EXACT keywords from the job description where candidate has matching experience
+- Mirror JD language in bullets and summary
+- Standard sections: Summary, Experience, Skills, Education, Certifications
+- Bullet points start with strong action verbs
+- Skills section: group by category on separate lines, comma-separated
 
-Output clean markdown only. No JSON. No explanation."""
+{MARKDOWN_STRUCTURE}"""
 
 RECRUITER_SYSTEM = f"""{GROUNDING_NOTICE}
 
-You are a professional resume writer. Generate a compelling, human-readable resume in MARKDOWN format.
+You are a professional resume writer creating a compelling, human-readable resume.
 
 RULES:
 - Write a strong narrative summary (3-4 lines) tailored to the specific role and company
-- Make every bullet scannable and impactful — lead with the result, then the action
-- Highlight the most RELEVANT experience prominently for this role
-- Group skills meaningfully (not just a flat list)
-- Add a "Why [Company]" or "Career Highlight" callout if the resume has strong relevant wins
+- Lead every bullet with the RESULT, then the action (e.g., "Drove 40% retention improvement by...")
+- Highlight most RELEVANT experience for this specific role
 - Make it feel personal and compelling, not robotic
 
-Output clean markdown only. No JSON. No explanation."""
+{MARKDOWN_STRUCTURE}"""
 
 IMPACT_SYSTEM = f"""{GROUNDING_NOTICE}
 
-You are a C-suite resume coach focused on business impact. Generate an achievement-driven resume in MARKDOWN format.
+You are a C-suite resume coach focused on business impact and achievements.
 
 RULES:
-- Every bullet must start with a quantified result if numbers exist in the master resume
-  Format: "Drove [RESULT] by [ACTION] — [CONTEXT]"
-- Surface the TOP 3 career achievements in a dedicated "Key Achievements" section at the top
-- Use power verbs: Scaled, Generated, Drove, Transformed, Reduced, Accelerated
-- Cut anything that isn't an achievement — no "responsible for" or "worked on"
-- Prioritize business impact: revenue, growth, efficiency, user numbers, cost savings
+- Add a "## KEY ACHIEVEMENTS" section right after Summary with top 3 wins
+- Every bullet = quantified result + action + context
+- Format: "Scaled [X] from [A] to [B] by [action], generating [impact]"
+- Use power verbs: Scaled, Generated, Drove, Transformed, Accelerated
+- Cut all "responsible for" — only achievements count
 
-Output clean markdown only. No JSON. No explanation."""
+{MARKDOWN_STRUCTURE}"""
 
 
 async def generate_tailored_resume(
