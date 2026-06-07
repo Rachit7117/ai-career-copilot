@@ -1,47 +1,58 @@
 """Generate tailored resumes grounded in the master resume. Never fabricates."""
 import json
 from typing import Any
-from .ai_service import llm_json
+from .ai_service import llm_complete, llm_json
 
-GROUNDING_NOTICE = """CRITICAL RULE: You are STRICTLY FORBIDDEN from inventing any:
-- Companies, job titles, or employment history
-- Skills, tools, or technologies not mentioned in the master resume
-- Projects, certifications, or education
-- Quantified metrics not present in the master resume
-- Any experience or achievement
+GROUNDING_NOTICE = """CRITICAL RULE — STRICTLY FORBIDDEN:
+- Inventing companies, job titles, or employment history
+- Adding skills, tools, or technologies not in the master resume
+- Creating projects, certifications, or education not listed
+- Fabricating metrics, numbers, or quantified results
+- Any experience or achievement not present in the source resume
 
-You may ONLY: rewrite, reorder, improve wording, surface relevant existing content, optimize for ATS keywords.
-If the master resume does not contain something required by the JD — acknowledge the gap, do not fabricate."""
+ALLOWED: Rewrite wording, reorder bullets, surface relevant existing content, optimize phrasing."""
 
 ATS_SYSTEM = f"""{GROUNDING_NOTICE}
 
-Generate an ATS-optimized version of the resume for this job description.
-- Mirror JD keywords exactly where the candidate has matching experience
-- Use standard section headers (Experience, Education, Skills, etc.)
-- Remove graphics-heavy formatting language
-- Prioritize keyword density from the JD
+You are an ATS optimization expert. Generate a clean, keyword-rich resume in MARKDOWN format.
 
-Return JSON matching the master resume schema with the same fields."""
+RULES:
+- Use EXACT keywords from the job description where the candidate has matching experience
+- Standard section headers: Summary, Experience, Skills, Education, Certifications
+- Bullet points start with strong action verbs (Led, Built, Drove, Scaled, etc.)
+- Include only skills/tools explicitly mentioned in the master resume
+- Optimize for ATS parsers: no tables, no columns, clean formatting
+- Summary should be 2-3 lines with role title + top 3 matching strengths
+
+Output clean markdown only. No JSON. No explanation."""
 
 RECRUITER_SYSTEM = f"""{GROUNDING_NOTICE}
 
-Generate a human-readable recruiter version of this resume.
-- Lead with a strong, accurate summary tailored to the role
-- Make bullets compelling and easy to scan
-- Quantify achievements where numbers already exist in the master resume
-- Highlight most relevant experience first
+You are a professional resume writer. Generate a compelling, human-readable resume in MARKDOWN format.
 
-Return JSON matching the master resume schema."""
+RULES:
+- Write a strong narrative summary (3-4 lines) tailored to the specific role and company
+- Make every bullet scannable and impactful — lead with the result, then the action
+- Highlight the most RELEVANT experience prominently for this role
+- Group skills meaningfully (not just a flat list)
+- Add a "Why [Company]" or "Career Highlight" callout if the resume has strong relevant wins
+- Make it feel personal and compelling, not robotic
+
+Output clean markdown only. No JSON. No explanation."""
 
 IMPACT_SYSTEM = f"""{GROUNDING_NOTICE}
 
-Generate an impact-focused version emphasizing achievements and results.
-- Surface the strongest achievement bullets from the master resume
-- Use strong action verbs
-- Highlight quantifiable results that already exist in the resume
-- Focus on business impact
+You are a C-suite resume coach focused on business impact. Generate an achievement-driven resume in MARKDOWN format.
 
-Return JSON matching the master resume schema."""
+RULES:
+- Every bullet must start with a quantified result if numbers exist in the master resume
+  Format: "Drove [RESULT] by [ACTION] — [CONTEXT]"
+- Surface the TOP 3 career achievements in a dedicated "Key Achievements" section at the top
+- Use power verbs: Scaled, Generated, Drove, Transformed, Reduced, Accelerated
+- Cut anything that isn't an achievement — no "responsible for" or "worked on"
+- Prioritize business impact: revenue, growth, efficiency, user numbers, cost savings
+
+Output clean markdown only. No JSON. No explanation."""
 
 
 async def generate_tailored_resume(
@@ -56,20 +67,28 @@ async def generate_tailored_resume(
         "impact": IMPACT_SYSTEM,
     }
     system = system_prompts.get(version_type, ATS_SYSTEM)
-    prompt = f"""MASTER RESUME (source of truth):
+
+    prompt = f"""MASTER RESUME (source of truth — do not fabricate beyond this):
 {json.dumps(master_resume, indent=2)[:6000]}
 
 JOB DESCRIPTION ANALYSIS:
-{json.dumps(jd_parsed, indent=2)[:3000]}
+{json.dumps(jd_parsed, indent=2)[:2000]}
 
-Generate the {version_type.upper()} version of this resume tailored for this role.
-Return ONLY the structured resume JSON."""
+Generate the {version_type.upper()} version of this resume tailored for this specific role.
+Remember: output clean markdown only."""
 
-    return await llm_json(user_id, system, prompt)
+    content_md = await llm_complete(user_id, system, prompt, temperature=0.2)
+
+    # Clean up any accidental code fences
+    if content_md.strip().startswith("```"):
+        lines = content_md.strip().split("\n")
+        content_md = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+    return {"content_md": content_md, "version_type": version_type}
 
 
 async def resume_to_markdown(resume_data: dict[str, Any]) -> str:
-    """Convert structured resume JSON to clean markdown."""
+    """Convert structured resume JSON to clean markdown (legacy fallback)."""
     c = resume_data.get("contact", {})
     lines = []
 
@@ -114,17 +133,5 @@ async def resume_to_markdown(resume_data: dict[str, Any]) -> str:
         for cert in resume_data["certifications"]:
             lines.append(f"- **{cert.get('name', '')}** — {cert.get('issuer', '')} ({cert.get('date', '')})")
         lines.append("")
-
-    if resume_data.get("projects"):
-        lines.append("## Projects")
-        for proj in resume_data["projects"]:
-            lines.append(f"**{proj.get('name', '')}**")
-            if proj.get("description"):
-                lines.append(proj["description"])
-            for bullet in proj.get("bullets", []):
-                lines.append(f"- {bullet}")
-            if proj.get("technologies"):
-                lines.append(f"*Technologies: {', '.join(proj['technologies'])}*")
-            lines.append("")
 
     return "\n".join(lines)

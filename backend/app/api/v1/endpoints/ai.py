@@ -65,7 +65,7 @@ async def generate_resume(body: GenerateResumeRequest, user: dict = Depends(get_
     jd_parsed = app.get("job_description_parsed") or {}
 
     tailored = await generate_tailored_resume(user["id"], master, jd_parsed, body.version_type)
-    md_content = await resume_to_markdown(tailored)
+    md_content = tailored["content_md"]
 
     # Version bump — set all existing current=False
     db.table("tailored_resumes").update({"is_current": False}).eq("application_id", body.application_id).eq("version_type", body.version_type).execute()
@@ -91,7 +91,7 @@ async def generate_resume(body: GenerateResumeRequest, user: dict = Depends(get_
         "entity_type": "tailored_resume",
         "entity_id": record["id"],
         "version_number": next_version,
-        "content": {"content": tailored, "content_md": md_content},
+        "content": {"content_md": md_content},
     }).execute()
 
     # Run ATS analysis automatically
@@ -202,14 +202,19 @@ async def interview_kit(body: InterviewKitRequest, user: dict = Depends(get_curr
         app.get("job_description_parsed") or {},
     )
 
+    # Only include columns that exist in the interview_kits table
+    valid_columns = {"recruiter_questions", "hiring_manager_questions", "technical_questions", "behavioral_questions", "case_questions", "star_stories"}
+    db_payload = {k: v for k, v in result.items() if k in valid_columns}
+
     existing = db.table("interview_kits").select("id").eq("application_id", body.application_id).execute().data
     if existing:
-        record = db.table("interview_kits").update(result).eq("application_id", body.application_id).execute().data[0]
+        record = db.table("interview_kits").update(db_payload).eq("application_id", body.application_id).execute().data[0]
     else:
-        record = db.table("interview_kits").insert({"user_id": user["id"], "application_id": body.application_id, **result}).execute().data[0]
+        record = db.table("interview_kits").insert({"user_id": user["id"], "application_id": body.application_id, **db_payload}).execute().data[0]
 
+    # Return full result (including extra fields) to the frontend
     await log_action(user["id"], "ai.interview_kit_generated", "interview_kit", record["id"])
-    return record
+    return {**record, **result}
 
 
 @router.post("/learning-roadmap")
