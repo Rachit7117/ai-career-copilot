@@ -1,5 +1,6 @@
 """LiteLLM-based AI service — routes to user's preferred model or default Groq."""
 import json
+import os
 from typing import Any
 import litellm
 from ..core.config import settings
@@ -8,8 +9,8 @@ from ..core.supabase import get_admin_client
 
 PROVIDER_MODEL_DEFAULTS = {
     "openai": "gpt-4o",
-    "claude": "claude-opus-4-8",
-    "gemini": "gemini/gemini-1.5-pro",
+    "claude": "claude-3-5-sonnet-20241022",
+    "gemini": "gemini/gemini-2.0-flash",
     "deepseek": "deepseek/deepseek-chat",
     "kimi": "openrouter/moonshot-v1-8k",
     "openrouter": "openrouter/openai/gpt-4o",
@@ -49,9 +50,26 @@ async def get_user_llm_config(user_id: str) -> dict:
     return {"model": settings.DEFAULT_MODEL, "api_key": settings.GROQ_API_KEY}
 
 
+def _set_provider_env(model: str, api_key: str) -> None:
+    """Set the correct env var so LiteLLM can pick up the key for each provider."""
+    if model.startswith("gemini/"):
+        os.environ["GEMINI_API_KEY"] = api_key
+    elif model.startswith("openai/") or model.startswith("gpt-"):
+        os.environ["OPENAI_API_KEY"] = api_key
+    elif model.startswith("claude") or model.startswith("anthropic/"):
+        os.environ["ANTHROPIC_API_KEY"] = api_key
+    elif model.startswith("deepseek/"):
+        os.environ["DEEPSEEK_API_KEY"] = api_key
+    elif model.startswith("openrouter/"):
+        os.environ["OPENROUTER_API_KEY"] = api_key
+    elif model.startswith("groq/"):
+        os.environ["GROQ_API_KEY"] = api_key
+
+
 async def llm_complete(user_id: str, system: str, user: str, temperature: float = 0.3) -> str:
     """Single completion call with user's preferred model."""
     cfg = await get_user_llm_config(user_id)
+    _set_provider_env(cfg["model"], cfg["api_key"])
     response = await litellm.acompletion(
         model=cfg["model"],
         api_key=cfg["api_key"],
@@ -67,6 +85,7 @@ async def llm_complete(user_id: str, system: str, user: str, temperature: float 
 async def llm_json(user_id: str, system: str, user: str) -> Any:
     """Completion that returns parsed JSON. Works with all models (no response_format dependency)."""
     cfg = await get_user_llm_config(user_id)
+    _set_provider_env(cfg["model"], cfg["api_key"])
     response = await litellm.acompletion(
         model=cfg["model"],
         api_key=cfg["api_key"],

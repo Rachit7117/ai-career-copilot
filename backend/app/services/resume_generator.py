@@ -126,16 +126,18 @@ Remember: output clean markdown only."""
 
     content_md = content_md.strip()
 
-    # Force name + contact at top if AI skipped it
-    if not content_md.startswith("# "):
-        contact = master_resume.get("contact", {})
-        name = contact.get("name", "")
-        parts = [p for p in [contact.get("email"), contact.get("phone"), contact.get("location"), contact.get("linkedin")] if p]
-        header = ""
-        if name:
-            header = f"# {name}\n"
-            if parts:
-                header += " | ".join(parts) + "\n\n"
+    # Always rebuild the name + contact header from master_resume to guarantee correct format
+    contact = master_resume.get("contact", {})
+    name = contact.get("name", "")
+    parts = [p for p in [contact.get("email"), contact.get("phone"), contact.get("location"), contact.get("linkedin")] if p]
+
+    if name:
+        # Strip any existing # header line(s) the AI may have generated (could be malformed)
+        import re as _re
+        # Remove leading # lines + any contact-looking line right after
+        content_md = _re.sub(r'^#[^\n]*\n[^\n#]*\n*', '', content_md).strip()
+        contact_line = " | ".join(parts) if parts else ""
+        header = f"# {name}\n{contact_line}\n\n" if contact_line else f"# {name}\n\n"
         content_md = header + content_md
 
     # Fix skills section: collapse bullet lists into comma-separated line

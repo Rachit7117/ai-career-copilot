@@ -11,8 +11,8 @@ router = APIRouter(prefix="/settings", tags=["settings"])
 
 PROVIDER_TEST_MODELS = {
     "openai": "gpt-4o-mini",
-    "claude": "claude-haiku-4-5-20251001",
-    "gemini": "gemini/gemini-1.5-flash",
+    "claude": "claude-3-5-haiku-20241022",
+    "gemini": "gemini/gemini-2.0-flash",
     "deepseek": "deepseek/deepseek-chat",
     "kimi": "openrouter/moonshot-v1-8k",
     "openrouter": "openrouter/openai/gpt-3.5-turbo",

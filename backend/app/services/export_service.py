@@ -29,9 +29,9 @@ def markdown_to_pdf(md: str) -> bytes:
 
     # Harvard-style styles
     name_style = ParagraphStyle("Name", fontSize=20, fontName="Helvetica-Bold",
-        alignment=1, spaceAfter=3)  # centered
+        alignment=1, spaceAfter=6, spaceBefore=0)  # centered
     contact_style = ParagraphStyle("Contact", fontSize=9, textColor=colors.HexColor("#444444"),
-        alignment=1, spaceAfter=10)  # centered
+        alignment=1, spaceAfter=8, spaceBefore=4)  # centered
     section_style = ParagraphStyle("Section", fontSize=10, fontName="Helvetica-Bold",
         spaceBefore=10, spaceAfter=2, textTransform="uppercase")
     job_title_style = ParagraphStyle("JobTitle", fontSize=10, fontName="Helvetica-Bold",
