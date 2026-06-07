@@ -34,8 +34,16 @@ async def analyze_ats(
     jd_parsed: dict[str, Any],
     job_description_raw: str,
 ) -> dict[str, Any]:
+    # Handle both markdown string and dict formats
+    if isinstance(resume_content, dict) and "content_md" in resume_content:
+        resume_text = resume_content["content_md"][:5000]
+    elif isinstance(resume_content, str):
+        resume_text = resume_content[:5000]
+    else:
+        resume_text = json.dumps(resume_content, indent=2)[:5000]
+
     prompt = f"""RESUME:
-{json.dumps(resume_content, indent=2)[:5000]}
+{resume_text}
 
 JOB DESCRIPTION (raw):
 {job_description_raw[:3000]}

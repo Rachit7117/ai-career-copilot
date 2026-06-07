@@ -94,21 +94,25 @@ async def generate_resume(body: GenerateResumeRequest, user: dict = Depends(get_
         "content": {"content_md": md_content},
     }).execute()
 
-    # Run ATS analysis automatically
-    ats_result = await analyze_ats(user["id"], tailored, jd_parsed, app["job_description"])
-    db.table("ats_analyses").insert({
-        "user_id": user["id"],
-        "application_id": body.application_id,
-        "tailored_resume_id": record["id"],
-        **{k: ats_result.get(k) for k in ["ats_score","skill_match_score","experience_match_score","overall_match_score","matched_keywords","missing_keywords","recommendations"]},
-        "full_analysis": ats_result,
-    }).execute()
-    db.table("job_applications").update({
-        "ats_score": ats_result.get("ats_score"),
-        "skill_match_score": ats_result.get("skill_match_score"),
-        "experience_match_score": ats_result.get("experience_match_score"),
-        "overall_match_score": ats_result.get("overall_match_score"),
-    }).eq("id", body.application_id).execute()
+    # Run ATS analysis automatically (non-blocking — don't fail resume if ATS fails)
+    ats_result = {}
+    try:
+        ats_result = await analyze_ats(user["id"], {"content_md": md_content}, jd_parsed, app["job_description"])
+        db.table("ats_analyses").insert({
+            "user_id": user["id"],
+            "application_id": body.application_id,
+            "tailored_resume_id": record["id"],
+            **{k: ats_result.get(k) for k in ["ats_score","skill_match_score","experience_match_score","overall_match_score","matched_keywords","missing_keywords","recommendations"]},
+            "full_analysis": ats_result,
+        }).execute()
+        db.table("job_applications").update({
+            "ats_score": ats_result.get("ats_score"),
+            "skill_match_score": ats_result.get("skill_match_score"),
+            "experience_match_score": ats_result.get("experience_match_score"),
+            "overall_match_score": ats_result.get("overall_match_score"),
+        }).eq("id", body.application_id).execute()
+    except Exception as e:
+        print(f"ATS analysis failed (non-fatal): {e}")
 
     await log_action(user["id"], "ai.resume_generated", "tailored_resume", record["id"], {"version_type": body.version_type})
     return {**record, "ats_analysis": ats_result}
