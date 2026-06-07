@@ -9,6 +9,7 @@ supabase==2.4.6
 
 # AI
 litellm==1.40.10
+google-generativeai>=0.7.0
 
 # File parsing
 pypdf==4.2.0
