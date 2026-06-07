@@ -11,6 +11,9 @@ import { Loader2, Wand2 } from "lucide-react";
 import { useState } from "react";
 import { marked } from "marked";
 
+// Use synchronous parse
+const mdToHtml = (md: string): string => marked.parse(md, { async: false }) as string;
+
 const REWRITE_ACTIONS = [
   { key: "rewrite", label: "Rewrite" },
   { key: "expand", label: "Expand" },
@@ -30,7 +33,7 @@ export function ResumeEditor({ resume, applicationId }: { resume: TailoredResume
       Underline,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
     ],
-    content: resume.content_md ? marked(resume.content_md) as string : "",
+    content: resume.content_md ? mdToHtml(resume.content_md) : "",
     onSelectionUpdate({ editor }) {
       const sel = editor.state.selection;
       const text = editor.state.doc.textBetween(sel.from, sel.to);
