@@ -1,5 +1,6 @@
 """Generate tailored resumes grounded in the master resume. Never fabricates."""
 import json
+import re
 from typing import Any
 from .ai_service import llm_complete, llm_json
 
@@ -132,16 +133,13 @@ Remember: output clean markdown only."""
     parts = [p for p in [contact.get("email"), contact.get("phone"), contact.get("location"), contact.get("linkedin")] if p]
 
     if name:
-        # Strip any existing # header line(s) the AI may have generated (could be malformed)
-        import re as _re
         # Remove leading # lines + any contact-looking line right after
-        content_md = _re.sub(r'^#[^\n]*\n[^\n#]*\n*', '', content_md).strip()
+        content_md = re.sub(r'^#[^\n]*\n[^\n#]*\n*', '', content_md).strip()
         contact_line = " | ".join(parts) if parts else ""
         header = f"# {name}\n{contact_line}\n\n" if contact_line else f"# {name}\n\n"
         content_md = header + content_md
 
     # Fix skills section: collapse bullet lists into comma-separated line
-    import re
     def collapse_skills(md: str) -> str:
         lines = md.split("\n")
         result = []
