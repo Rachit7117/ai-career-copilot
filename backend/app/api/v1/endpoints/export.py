@@ -4,8 +4,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 from ....core.security import get_current_user
 from ....core.supabase import get_admin_client
-from ....services.export_service import resume_to_pdf, resume_to_docx, cover_letter_to_pdf, cover_letter_to_docx
-from ....services.resume_generator import resume_to_markdown
+from ....services.export_service import markdown_to_pdf, markdown_to_docx, cover_letter_to_pdf, cover_letter_to_docx
 
 router = APIRouter(prefix="/export", tags=["export"])
 
@@ -25,18 +24,18 @@ async def export_document(body: ExportRequest, user: dict = Depends(get_current_
         if not record:
             raise HTTPException(status_code=404, detail="Resume not found")
 
+        md = record.get("content_md") or ""
+        if not md:
+            raise HTTPException(status_code=400, detail="Resume has no content. Please regenerate it.")
+
         if body.format == "pdf":
-            content = resume_to_pdf(record["content"])
-            return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="resume.pdf"'})
+            content = markdown_to_pdf(md)
+            return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="resume.pdf"'})
         elif body.format == "docx":
-            content = resume_to_docx(record["content"])
+            content = markdown_to_docx(md)
             return Response(content=content, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": 'attachment; filename="resume.docx"'})
-        elif body.format == "md":
-            md = record.get("content_md") or await resume_to_markdown(record["content"])
-            return Response(content=md.encode(), media_type="text/markdown", headers={"Content-Disposition": 'attachment; filename="resume.md"'})
-        elif body.format == "txt":
-            md = record.get("content_md") or await resume_to_markdown(record["content"])
-            return Response(content=md.encode(), media_type="text/plain", headers={"Content-Disposition": 'attachment; filename="resume.txt"'})
+        elif body.format in ("md", "txt"):
+            return Response(content=md.encode(), media_type="text/markdown", headers={"Content-Disposition": f'attachment; filename="resume.{body.format}"'})
 
     elif body.entity_type == "cover_letter":
         record = db.table("cover_letters").select("*").eq("id", body.entity_id).eq("user_id", user["id"]).single().execute().data
