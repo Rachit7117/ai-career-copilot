@@ -84,6 +84,12 @@ export default function ResumeStudioPage({ params }: { params: { id: string } })
       {currentResume ? (
         <div className="grid gap-4" style={{ gridTemplateColumns: showDiff && allVersions.length > 1 ? "1fr 1fr" : "1fr" }}>
           <ResumeEditor resume={currentResume} applicationId={id} />
+          {showDiff && allVersions.length <= 1 && (
+            <div className="bg-card border border-border rounded-xl p-8 text-center flex flex-col items-center justify-center">
+              <p className="font-medium text-sm">No previous version to compare</p>
+              <p className="text-xs text-muted-foreground mt-1">Click <strong>Regenerate</strong> to create a second version, then Show Diff will display the changes.</p>
+            </div>
+          )}
           {showDiff && allVersions.length > 1 && (
             <ResumeDiffViewer current={currentResume} previous={allVersions[1]} />
           )}

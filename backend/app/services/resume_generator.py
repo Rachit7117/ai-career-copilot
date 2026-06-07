@@ -124,6 +124,54 @@ Remember: output clean markdown only."""
         lines = content_md.strip().split("\n")
         content_md = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
 
+    content_md = content_md.strip()
+
+    # Force name + contact at top if AI skipped it
+    if not content_md.startswith("# "):
+        contact = master_resume.get("contact", {})
+        name = contact.get("name", "")
+        parts = [p for p in [contact.get("email"), contact.get("phone"), contact.get("location"), contact.get("linkedin")] if p]
+        header = ""
+        if name:
+            header = f"# {name}\n"
+            if parts:
+                header += " | ".join(parts) + "\n\n"
+        content_md = header + content_md
+
+    # Fix skills section: collapse bullet lists into comma-separated line
+    import re
+    def collapse_skills(md: str) -> str:
+        lines = md.split("\n")
+        result = []
+        in_skills = False
+        skill_bullets = []
+        for line in lines:
+            if re.match(r'^## (SKILLS?|Technical Skills?|Core Competencies)', line, re.I):
+                in_skills = True
+                result.append(line)
+                continue
+            if in_skills:
+                if line.startswith("## "):
+                    if skill_bullets:
+                        result.append(", ".join(skill_bullets))
+                        result.append("")
+                        skill_bullets = []
+                    in_skills = False
+                    result.append(line)
+                elif line.startswith("- ") or line.startswith("* "):
+                    skill_bullets.append(line[2:].strip())
+                elif line.strip() == "" and skill_bullets:
+                    continue
+                else:
+                    result.append(line)
+            else:
+                result.append(line)
+        if skill_bullets:
+            result.append(", ".join(skill_bullets))
+        return "\n".join(result)
+
+    content_md = collapse_skills(content_md)
+
     return {"content_md": content_md, "version_type": version_type}
 
 
