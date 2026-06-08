@@ -7,8 +7,8 @@ import { Key, Plus, Trash2, TestTube, CheckCircle2, XCircle, Loader2, Eye, EyeOf
 
 const PROVIDERS = [
   { id: "openai", label: "OpenAI", models: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"] },
-  { id: "claude", label: "Anthropic Claude", models: ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"] },
-  { id: "gemini", label: "Google Gemini", models: ["gemini/gemini-1.5-pro", "gemini/gemini-1.5-flash"] },
+  { id: "claude", label: "Anthropic Claude", models: ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"] },
+  { id: "gemini", label: "Google Gemini", models: ["gemini/gemini-2.0-flash", "gemini/gemini-1.5-pro", "gemini/gemini-1.5-flash"] },
   { id: "deepseek", label: "DeepSeek", models: ["deepseek/deepseek-chat"] },
   { id: "kimi", label: "Kimi (Moonshot)", models: ["openrouter/moonshot-v1-8k"] },
   { id: "openrouter", label: "OpenRouter", models: [] },
